@@ -16,6 +16,7 @@ Notifications.setNotificationHandler({
 export interface ScheduleAlarmParams {
   wakeUpTime: string;
   name: string;
+  soundFileName?: string;
 }
 
 export interface ScheduleResult {
@@ -58,7 +59,7 @@ function calculateNextAlarmTime(wakeUpTime: string): Date {
 }
 
 export async function scheduleAlarm(params: ScheduleAlarmParams): Promise<ScheduleResult> {
-  const { wakeUpTime, name } = params;
+  const { wakeUpTime, name, soundFileName } = params;
 
   try {
     const hasPermission = await requestNotificationPermissions();
@@ -83,13 +84,16 @@ export async function scheduleAlarm(params: ScheduleAlarmParams): Promise<Schedu
       };
     }
 
+    const notificationSound = soundFileName || true;
+
     await Notifications.scheduleNotificationAsync({
       identifier: ALARM_NOTIFICATION_ID,
       content: {
         title: 'Good Morning!',
-        body: `${name}, your personalized morning audio is ready to play.`,
-        sound: true,
+        body: `${name}, your personalized morning audio is ready.`,
+        sound: notificationSound,
         priority: Notifications.AndroidNotificationPriority.MAX,
+        interruptionLevel: 'timeSensitive',
         data: { type: 'morning-alarm' },
       },
       trigger: {

@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import { Play, Pause, RotateCcw, CloudSun, Clock, Bell, CheckCircle, AlertCircle, X, MapPin, User } from 'lucide-react-native';
 import { saveAudioLocally, deleteLocalAudio } from '../utils/audioStorage';
 import { scheduleAlarm, cancelExistingAlarm, formatAlarmTime, formatAlarmDate, ScheduleResult } from '../utils/alarmScheduler';
+import { saveNotificationSound, deleteNotificationSound } from '../utils/notificationSound';
 
 type SchedulingStatus = 'idle' | 'saving' | 'scheduling' | 'scheduled' | 'cancelling' | 'error';
 
@@ -121,7 +122,10 @@ export default function PlaybackScreen() {
     setSchedulingStatus('saving');
     setErrorMessage(null);
 
-    const savedPath = await saveAudioLocally(audioUrl);
+    const [savedPath, soundFileName] = await Promise.all([
+      saveAudioLocally(audioUrl),
+      saveNotificationSound(audioUrl),
+    ]);
 
     if (!isMounted.current) return;
 
@@ -134,7 +138,11 @@ export default function PlaybackScreen() {
     setLocalAudioPath(savedPath);
     setSchedulingStatus('scheduling');
 
-    const result = await scheduleAlarm({ wakeUpTime, name });
+    const result = await scheduleAlarm({
+      wakeUpTime,
+      name,
+      soundFileName: soundFileName || undefined,
+    });
 
     if (!isMounted.current) return;
 
@@ -157,7 +165,7 @@ export default function PlaybackScreen() {
 
     try {
       await cancelExistingAlarm();
-      await deleteLocalAudio();
+      await Promise.all([deleteLocalAudio(), deleteNotificationSound()]);
 
       if (!isMounted.current) return;
 
