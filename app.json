@@ -11,9 +11,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vincent198725.boltexponativewind",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
       }
     },
     "web": {
