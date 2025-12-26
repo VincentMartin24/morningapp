@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { Audio } from 'expo-av';
-import { Play, Pause, RotateCcw, CloudSun, Clock, Bell, CheckCircle, AlertCircle, X, MapPin, User } from 'lucide-react-native';
+import { Play, Pause, RotateCcw, CloudSun, Clock, Bell, CheckCircle, AlertCircle, X, MapPin, User, Zap, ChevronDown, ChevronUp, Copy, ExternalLink } from 'lucide-react-native';
 import { saveAudioLocally, deleteLocalAudio } from '../utils/audioStorage';
 import { scheduleAlarm, cancelExistingAlarm, formatAlarmTime, formatAlarmDate, ScheduleResult } from '../utils/alarmScheduler';
 import { saveNotificationSound, deleteNotificationSound } from '../utils/notificationSound';
@@ -20,6 +21,16 @@ export default function PlaybackScreen() {
   const [schedulingStatus, setSchedulingStatus] = useState<SchedulingStatus>('idle');
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showAutoPlayGuide, setShowAutoPlayGuide] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  const deepLinkUrl = 'myapp://play-morning-audio';
+
+  const handleCopyUrl = async () => {
+    await Clipboard.setStringAsync(deepLinkUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
 
   const hasWeather = params.weatherDescription && params.weatherTemperature;
   const wakeUpTime = params.wakeUpTime as string;
@@ -273,6 +284,114 @@ export default function PlaybackScreen() {
                   <X size={18} color="#DC2626" />
                   <Text style={styles.cancelButtonText}>Cancel Scheduled Audio</Text>
                 </TouchableOpacity>
+
+                {Platform.OS === 'ios' && (
+                  <View style={styles.autoPlaySection}>
+                    <TouchableOpacity
+                      style={styles.autoPlayHeader}
+                      onPress={() => setShowAutoPlayGuide(!showAutoPlayGuide)}
+                    >
+                      <View style={styles.autoPlayHeaderLeft}>
+                        <Zap size={18} color="#0066CC" />
+                        <Text style={styles.autoPlayHeaderText}>Enable Auto-Play</Text>
+                      </View>
+                      {showAutoPlayGuide ? (
+                        <ChevronUp size={20} color="#666" />
+                      ) : (
+                        <ChevronDown size={20} color="#666" />
+                      )}
+                    </TouchableOpacity>
+
+                    {showAutoPlayGuide && (
+                      <View style={styles.autoPlayGuide}>
+                        <Text style={styles.autoPlayDescription}>
+                          Set up iOS Shortcuts to automatically play your morning audio without tapping the notification.
+                        </Text>
+
+                        <View style={styles.stepsList}>
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>1</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Open the <Text style={styles.stepBold}>Shortcuts</Text> app on your iPhone
+                            </Text>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>2</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Go to <Text style={styles.stepBold}>Automation</Text> tab and tap <Text style={styles.stepBold}>+ New Automation</Text>
+                            </Text>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>3</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Select <Text style={styles.stepBold}>Time of Day</Text> and set it to <Text style={styles.stepBold}>{wakeUpTime}</Text>
+                            </Text>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>4</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Choose <Text style={styles.stepBold}>Run Immediately</Text> (not "Ask Before Running")
+                            </Text>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>5</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Tap <Text style={styles.stepBold}>New Blank Automation</Text>, then search for <Text style={styles.stepBold}>Open URLs</Text> action
+                            </Text>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>6</Text>
+                            </View>
+                            <View style={styles.stepTextContainer}>
+                              <Text style={styles.stepText}>
+                                Paste this URL:
+                              </Text>
+                              <TouchableOpacity style={styles.urlCopyButton} onPress={handleCopyUrl}>
+                                <Text style={styles.urlText}>{deepLinkUrl}</Text>
+                                {copiedUrl ? (
+                                  <CheckCircle size={16} color="#16A34A" />
+                                ) : (
+                                  <Copy size={16} color="#0066CC" />
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          <View style={styles.step}>
+                            <View style={styles.stepNumber}>
+                              <Text style={styles.stepNumberText}>7</Text>
+                            </View>
+                            <Text style={styles.stepText}>
+                              Tap <Text style={styles.stepBold}>Done</Text> to save the automation
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.autoPlayNote}>
+                          <Text style={styles.autoPlayNoteText}>
+                            Your audio will automatically play at {wakeUpTime} every day, even if your phone is locked.
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 
@@ -539,5 +658,101 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
     letterSpacing: 0.3,
+  },
+  autoPlaySection: {
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingTop: 16,
+    alignSelf: 'stretch',
+  },
+  autoPlayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  autoPlayHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  autoPlayHeaderText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0066CC',
+  },
+  autoPlayGuide: {
+    marginTop: 16,
+  },
+  autoPlayDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  stepsList: {
+    gap: 12,
+  },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F0F0F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  stepText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    flex: 1,
+  },
+  stepTextContainer: {
+    flex: 1,
+  },
+  stepBold: {
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  urlCopyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F7FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#CCE0FF',
+  },
+  urlText: {
+    fontSize: 13,
+    color: '#0066CC',
+    fontFamily: 'monospace',
+    flex: 1,
+  },
+  autoPlayNote: {
+    marginTop: 16,
+    backgroundColor: '#F0F7FF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#CCE0FF',
+  },
+  autoPlayNoteText: {
+    fontSize: 13,
+    color: '#0066CC',
+    lineHeight: 18,
   },
 });

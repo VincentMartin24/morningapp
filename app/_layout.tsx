@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
+import * as Linking from 'expo-linking';
 import { Audio } from 'expo-av';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { getLocalAudioPath } from '../utils/audioStorage';
@@ -34,6 +35,14 @@ async function playAlarmAudio() {
   }
 }
 
+function handleDeepLink(url: string) {
+  const parsedUrl = Linking.parse(url);
+
+  if (parsedUrl.path === 'play-morning-audio' || parsedUrl.hostname === 'play-morning-audio') {
+    playAlarmAudio();
+  }
+}
+
 export default function RootLayout() {
   useFrameworkReady();
   const notificationResponseListener = useRef<Notifications.EventSubscription | null>(null);
@@ -41,6 +50,16 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
+
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
+    const linkingSubscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
 
     notificationReceivedListener.current = Notifications.addNotificationReceivedListener(
       async (notification) => {
@@ -63,6 +82,7 @@ export default function RootLayout() {
     );
 
     return () => {
+      linkingSubscription.remove();
       if (notificationReceivedListener.current) {
         notificationReceivedListener.current.remove();
       }
